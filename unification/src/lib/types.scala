@@ -14,6 +14,10 @@ enum RelOp(val fw: Int => Int, val bw: Int => Int) {
         (v: Int) => v - 1,
         (v: Int) => v + 1
     )
+    case Rec extends RelOp(
+        (_: Int) => Int.MaxValue,
+        (_: Int) => Int.MaxValue
+    )
 }
 
 enum LogOp {

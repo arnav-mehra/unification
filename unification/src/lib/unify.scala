@@ -64,14 +64,18 @@ class RelSets(val sets: ArrayBuffer[RelSet]) {
     def or(rss2: RelSets): RelSets = {
         RelSets(sets ++ rss2.sets)
     }
+
+    def append_to_all(new_set: RelSet): Unit = {
+        sets.foreach(_.appendAll(new_set))
+    }
 }
 
-class Unify(
+class Unifier(
     val vars: VarSet,
     val stack_ptr: VarId,
-    val caller: Ast
+    val callee: Ast
 ) {
-    def unify(): RelSets = unify(caller)
+    def unify(): RelSets = unify(callee)
 
     def unify(ast: Ast): RelSets = {
         ast match {
@@ -93,8 +97,22 @@ class Unify(
                     case _ => RelSets(ArrayBuffer())
                 }
             }
+            case Ast.Func(callee, args, var_cnt) => {
+                var rel: Rel = (Int.MaxValue, Int.MaxValue, RelOp.Rec)
+                RelSets(ArrayBuffer(rel))
+            }
             case Ast.Func(ast, args, var_cnt) => {
-                RelSets(ArrayBuffer()) // to redo
+                var Ast.Func(_, _, caller_var_cnt) = callee: @unchecked
+                var new_stack_ptr = stack_ptr + caller_var_cnt
+                var new_rel_sets = Unifier(new_stack_ptr, ast).unify()
+
+                var arg_bind_rel_set: RelSet = Range(0, args.length).map(i => {
+                    var arg_id = args(i)
+                    (i + new_stack_ptr, arg_id + stack_ptr, RelOp.Eq)
+                })
+
+                new_rel_sets.append_to_all(arg_bind_rel_set)
+                new_rel_sets
             }
             case _ => {
                 RelSets(ArrayBuffer())

@@ -34,7 +34,7 @@ object Main {
     
     var vars: VarSet = ArrayBuffer(Option.empty, Option.empty, Option.empty)
 
-    var u = Unify(vars, 0, func)
+    var u = Unifier(vars, 0, func)
     var sol: RelSets = u.unify()
     sol.sets.foreach(println)
   }
