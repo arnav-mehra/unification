@@ -1,108 +1,104 @@
 package lib.unify
+import lib.types.*
 import scala.collection.mutable.ArrayBuffer
 
-enum OP {
-    case And
-    case Or
-    case Eq
+enum Status {
+    case NoChange
+    case Change
+    case NoSat
 }
 
-enum AST {
-    case Var  (id: Int)
-    case BinOp(op: OP, left: AST, right: AST)
-    case UnOp (op: OP, child: AST)
-    case Func (ast: AST, args: ArrayBuffer[Int], var_cnt: Int)
-}
+class Solver(vars: VarSet, rels: RelSet) {
+    def apply_rel(rel: Rel): Status = {
+        var (var_id1: VarId, var_id2: VarId, rel_op: RelOp) = rel
 
-type Var = Option[Int]
-type Tie = (Int, Int)
+        (vars(var_id1), vars(var_id2)) match {
+            case (Some(v1), Some(v2)) => {
+                if (v1 == v2) Status.NoChange else Status.NoSat
+            }
+            case (None, Some(v2)) => {
+                vars(var_id1) = Some(rel_op.fw(v2))
+                Status.Change
+            }
+            case (Some(v1), None) => {
+                vars(var_id2) = Some(rel_op.bw(v1))
+                Status.Change
+            }
+            case _ => Status.NoChange
+        }
+    }
 
-class Env(val vars: ArrayBuffer[Var], val stack_ptr: Int, val caller: AST) {
-    def applied(ties: ArrayBuffer[Tie]): Env = {
-        var new_vars = vars.clone()
-
-        var let_me_out = false
-        while (!let_me_out) {
-            let_me_out = true
-            for (tie <- ties) {
-                var (to, from) = tie
-                (new_vars(to), vars(from)) match {
-                    case (Some(x), Some(y)) where x != y => {
-                        let_me_out = false
-                        e(to) = vars(from)
-                    }
-                    _ => {}
+    def solve(): Boolean = {
+        var sat: Option[Boolean] = Option.empty
+        
+        while (sat.isEmpty) {
+            var change = false
+            for (rel <- rels) {
+                apply_rel(rel) match {
+                    case Status.NoSat => sat = Some(false)
+                    case Status.Change => change = true
+                    case Status.NoChange => {}
                 }
+            }
+            if (sat.isEmpty && !change) {
+                sat = Some(true)
             }
         }
 
-        Env(new_vars)
+        var Some(b) = sat: @unchecked
+        b
     }
-    
-    def shifted(var_cnt: Int): Env = {
-        var AST.Func(_, _, var_cnt) = caller: @unchecked
-        var new_vars = vars.clone()
-        Range(0, var_cnt).foreach(_ => new_vars.addOne(Option.empty))
-        Env(new_vars, stack_ptr + var_cnt)
-    }
-
-    def print(ties: ArrayBuffer[Tie]): Unit = {
-        // ima take a shit, shit shit.
-    }
-
-    def get_var(idx: Int): Var = vars(stack_ptr + idx)
-    def set_var(idx: Int, v: Var): Unit = vars(stack_ptr + idx) = v
 }
 
-object Union {
-    def unify(ast: AST, env: Env): (Boolean, ArrayBuffer[Tie]) = { // return (satisfiable, ties/reqs)
-        ast match {
-            case AST.BinOp(OP.And, left, right) => {
-                val (leftSat, leftTies) = unify(left, env)
-                leftSat match {
-                    case true => {
-                        val (rightSat, rightTies) = unify(right, env.applied(leftTies))
-                        rightSat match {
-                            case true  => (true, leftTies ++ rightTies)
-                            case false => (false, ArrayBuffer())
-                        }
-                    }
-                    case false => (false, ArrayBuffer())
-                }
+class RelSets(val sets: ArrayBuffer[RelSet]) {
+    def and(rss2: RelSets): RelSets = {
+        val new_sets: ArrayBuffer[RelSet] = ArrayBuffer()
+        for (set <- sets) {
+            for (set2 <- rss2.sets) {
+                new_sets.addOne(set ++ set2)
             }
-            case AST.BinOp(OP.Or, left, right) => {
-                val (leftSat, leftTies) = unify(left, env)
-                val (rightSat, rightTies) = unify(right, env)
-                (leftSat, rightSat) match {
-                    case (false, false) => (false, ArrayBuffer())
-                    case (true, _)      => (true, leftTies)
-                    case (_, true)      => (true, rightTies)
-                }
-            }
-            case AST.BinOp(OP.Eq, left, right) => {
-                val AST.Var(leftId) = left: @unchecked
-                val AST.Var(rightId) = right: @unchecked
-                (env.get_var(leftId), env.get_var(rightId)) match {
-                    case (Some(x), Some(y)) => (x == y, ArrayBuffer())                                   // value = value
-                    case (None, None)       => (true, ArrayBuffer((leftId, rightId), (rightId, leftId))) // symbol = symbol
-                    case (None, _)          => (true, ArrayBuffer((leftId, rightId)))                    // symbol = value
-                    case (_, None)          => (true, ArrayBuffer((rightId, leftId)))                    // value = symbol
-                }
-            }
-            case AST.Var(id) => (true, ArrayBuffer())
-            case AST.Func(ast, args, var_cnt) => {
-                var new_env: Env = env.shifted(var_cnt)
-                var new_ties: ArrayBuffer[Tie] = ArrayBuffer()
-                for (i <- 0 to args.length) {
-                    var arg_idx = args(i)
-                    var base_idx = i + env.stack_ptr
-                    new_ties.addAll(((arg_idx, base_idx), (base_idx, arg_idx)))
-                }
+        }
+        RelSets(new_sets)
+    }
 
-                var (sat, ties) = unify(ast, new_env)
-                (sat, ties ++ new_ties)
+    def or(rss2: RelSets): RelSets = {
+        RelSets(sets ++ rss2.sets)
+    }
+}
+
+class Unify(
+    val vars: VarSet,
+    val stack_ptr: VarId,
+    val caller: Ast
+) {
+    def unify(): RelSets = unify(caller)
+
+    def unify(ast: Ast): RelSets = {
+        ast match {
+            case Ast.BinOp(log_op: LogOp, left, right) => {
+                var leftRels = unify(left)
+                var rightRels = unify(right)
+                log_op match {
+                    case LogOp.And => leftRels.and(rightRels)
+                    case LogOp.Or => leftRels.or(rightRels)
+                }
             }
-            case _ => (false, ArrayBuffer())
+            case Ast.BinOp(rel_op: RelOp, left, right) => {
+                (left, right) match {
+                    case (Ast.Var(leftId), Ast.Var(rightId)) => {
+                        var rel: Rel = (leftId + stack_ptr, rightId + stack_ptr, rel_op)
+                        var rel_set: RelSet = ArrayBuffer(rel)
+                        RelSets(ArrayBuffer(rel_set))
+                    }
+                    case _ => RelSets(ArrayBuffer())
+                }
+            }
+            case Ast.Func(ast, args, var_cnt) => {
+                RelSets(ArrayBuffer()) // to redo
+            }
+            case _ => {
+                RelSets(ArrayBuffer())
+            }
         }
     }
 }

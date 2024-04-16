@@ -1,28 +1,41 @@
 package main
+import lib.types.*
 import lib.unify.*
 import scala.collection.mutable.ArrayBuffer
 
 object Main {
   def main(args: Array[String]): Unit = {
-    var SameLen = AST.BinOp(OP.And,
-      AST.BinOp(
-        OP.Eq,
-        AST.Var(0),
-        AST.Var(1)
+    var func = Ast.BinOp(LogOp.And,
+      Ast.BinOp(LogOp.Or,
+        Ast.BinOp(
+          RelOp.Eq,
+          Ast.Var(0),
+          Ast.Var(1)
+        ),
+        Ast.BinOp(
+          RelOp.Eq,
+          Ast.Var(1),
+          Ast.Var(2)
+        )
       ),
-      AST.BinOp(
-        OP.Eq,
-        AST.Var(1),
-        AST.Var(2)
+      Ast.BinOp(LogOp.Or,
+        Ast.BinOp(
+          RelOp.Eq,
+          Ast.Var(1),
+          Ast.Var(0)
+        ),
+        Ast.BinOp(
+          RelOp.Eq,
+          Ast.Var(2),
+          Ast.Var(1)
+        )
       )
     )
     
-    var vars: ArrayBuffer[Var] = ArrayBuffer(Option.empty, Option.empty, Option.empty)
-    var env = Env(vars)
+    var vars: VarSet = ArrayBuffer(Option.empty, Option.empty, Option.empty)
 
-    var (sat, ties) = Union.unify(SameLen, env)
-    var sol = env.applied(ties)
-    println(sat)
-    println(sol.vars)
+    var u = Unify(vars, 0, func)
+    var sol: RelSets = u.unify()
+    sol.sets.foreach(println)
   }
 }
