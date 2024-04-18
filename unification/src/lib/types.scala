@@ -1,14 +1,23 @@
 package lib.types
+import lib.solver.*
 import scala.collection.mutable.ArrayBuffer
+import scala.runtime.ScalaRunTime
 
-enum RelOp(val fw: Int => Int, val bw: Int => Int) {
+type Var = Option[Int]
+
+type VarId = Int
+
+type VarSet = ArrayBuffer[Var]
+
+// relation operations
+enum RelOp(val fw: Int => Option[Int], val bw: Int => Option[Int]) {
     case Eq extends RelOp(
-        (v: Int) => v,
-        (v: Int) => v
+        (v: Int) => Some(v),
+        (v: Int) => Some(v)
     )
     case Inc extends RelOp(
-        (v: Int) => v + 1,
-        (v: Int) => v - 1
+        (v: Int) => Some(v + 1),
+        (v: Int) => if (v == 0) None else Some(v - 1)
     )
 }
 
@@ -18,29 +27,34 @@ enum LogOp {
 }
 
 enum Ast {
-    case Var  (id: Int)
+    case Var  (id: VarId)
     case BinOp(op: LogOp | RelOp, left: Ast, right: Ast)
-    case Func (ast: Ast, vars: VarSet)
-    case Call (fn: Ast, args: ArrayBuffer[Int])
+    case Func (var ast: Ast, var vars: VarSet)
+    case Call (callee: Ast.Func, args: ArrayBuffer[VarId])
 }
 
-type VarId = Int
+enum Rel {
+    case Rec(call: Ast.Call)
+    case Std(left: VarId, right: VarId, rel: RelOp)
 
-type Var = Option[Int]
-
-type VarSet = ArrayBuffer[Var]
-
-enum Rel(right: VarId, left: VarId, rel: RelOp | Ast) {
-    case Rec(fn: Ast) extends Rel(
-        Int.MaxValue,
-        Int.MaxValue,
-        fn
-    )
+    override def toString(): String = {
+        // var var_names = ArrayBuffer("x", "y", "z", "0", "xc", "yc", "x2", "y2", "z2", "0", "x2c", "y2c", "x3", "y3", "z3")
+        // this match {
+        //     case Rec(call) => "Rec(" + call.args.foldLeft("")((acc, id) => acc + ", [" + var_names(id) + "]").substring(2) + ")"
+        //     case Std(left, right, RelOp.Eq) => "[" + var_names(left) + "] = [" + var_names(right) + "]"
+        //     case Std(left, right, RelOp.Inc) => "[" + var_names(left) + "] = [" + var_names(right) + "] + 1"
+        // }
+        this match {
+            case Rec(call) => "Rec(" + call.args.foldLeft("")((acc, id) => acc + ", [" + id + "]").substring(2) + ")"
+            case Std(left, right, RelOp.Eq) => "[" + left + "] = [" + right + "]"
+            case Std(left, right, RelOp.Inc) => "[" + left + "] = [" + right + "] + 1"
+        }
+    }
 }
 
 type RelSet = ArrayBuffer[Rel]
 
-class RelSets(val sets: ArrayBuffer[RelSet]) {
+class RelSets(val sets: ArrayBuffer[RelSet] = ArrayBuffer()) {
     def and(rss2: RelSets): RelSets = {
         val new_sets: ArrayBuffer[RelSet] = ArrayBuffer()
         for (set <- sets) {
@@ -60,6 +74,11 @@ class RelSets(val sets: ArrayBuffer[RelSet]) {
         this
     }
 
+    def prepend_to_all(new_set: RelSet): RelSets = {
+        sets.foreach(_.prependAll(new_set))
+        this
+    }
+
     def sort(): RelSets = {
         sets.sortInPlaceBy(set => {
             if (set.contains(Rel.Rec)) Int.MaxValue else set.length 
@@ -67,7 +86,16 @@ class RelSets(val sets: ArrayBuffer[RelSet]) {
         this
     }
 
-    def find_sat_set(vars: VarSet): RelSet = {
-        sets.find(set => Solver(vars.clone(), set).solve())
+    def find_sat_set(vars: VarSet): Option[(RelSet, VarSet)] = {
+        var res: Option[(RelSet, VarSet)] = None
+        sets.takeWhile(set => {
+            res = Solver(vars.clone(), set).solve()
+            res.isEmpty
+        })
+        res
+    }
+
+    def print(): Unit = {
+        sets.foreach(println)
     }
 }

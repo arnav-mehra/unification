@@ -1,9 +1,7 @@
-[0m[[0m[31merror[0m] [0m[0m[31m[31m-- [E008] Not Found Error: C:\Users\Arnav\Documents\GitHub\unification\unification\src\lib\unify.scala:20:44 [0m[0m[0m
-[0m[[0m[31merror[0m] [0m[0m[31m20 |[0m                vars(var_id1) = Some(rel_op.fp.fw(v2))[0m
-[0m[[0m[31merror[0m] [0m[0m[31m[31m   |[0m                                     ^^^^^^^^^[0m[0m
-[0m[[0m[31merror[0m] [0m[0m[31m   |[0m    value fp is not a member of lib.types.RelOp - did you mean RelOp.fw?[0m
-[0m[[0m[31merror[0m] [0m[0m[31m[31m-- [E008] Not Found Error: C:\Users\Arnav\Documents\GitHub\unification\unification\src\lib\unify.scala:24:44 [0m[0m[0m
-[0m[[0m[31merror[0m] [0m[0m[31m24 |[0m                vars(var_id2) = Some(rel_op.fp.bw(v1))[0m
-[0m[[0m[31merror[0m] [0m[0m[31m[31m   |[0m                                     ^^^^^^^^^[0m[0m
-[0m[[0m[31merror[0m] [0m[0m[31m   |[0m    value fp is not a member of lib.types.RelOp - did you mean RelOp.fw?[0m
-[0m[[0m[31merror[0m] [0m[0mtwo errors found[0m
+[0m[[0m[31merror[0m] [0m[0m[31m[31m-- [E006] Not Found Error: C:\Users\Arnav\Documents\GitHub\unification\unification\src\lib\types.scala:48:89 [0m[0m[0m
+[0m[[0m[31merror[0m] [0m[0m[31m48 |[0m            [33mcase[0m Rec(call) => [31m"Rec("[0m + call.args.foldLeft([31m""[0m)((acc, id) => acc + [31m", ["[0m + var_names(id) + [31m"]"[0m).substring([31m2[0m) + [31m")"[0m[0m
+[0m[[0m[31merror[0m] [0m[0m[31m[31m   |[0m                                                                                         ^^^^^^^^^[0m[0m
+[0m[[0m[31merror[0m] [0m[0m[31m   |[0m                                                    Not found: var_names[0m
+[0m[[0m[31merror[0m] [0m[0m[31m   |[0m[0m
+[0m[[0m[31merror[0m] [0m[0m[31m   |[0m longer explanation available when compiling with `-explain`[0m
+[0m[[0m[31merror[0m] [0m[0mone error found[0m
