@@ -38,12 +38,6 @@ enum Rel {
     case Std(left: VarId, right: VarId, rel: RelOp)
 
     override def toString(): String = {
-        // var var_names = ArrayBuffer("x", "y", "z", "0", "xc", "yc", "x2", "y2", "z2", "0", "x2c", "y2c", "x3", "y3", "z3")
-        // this match {
-        //     case Rec(call) => "Rec(" + call.args.foldLeft("")((acc, id) => acc + ", [" + var_names(id) + "]").substring(2) + ")"
-        //     case Std(left, right, RelOp.Eq) => "[" + var_names(left) + "] = [" + var_names(right) + "]"
-        //     case Std(left, right, RelOp.Inc) => "[" + var_names(left) + "] = [" + var_names(right) + "] + 1"
-        // }
         this match {
             case Rec(call) => "Rec(" + call.args.foldLeft("")((acc, id) => acc + ", [" + id + "]").substring(2) + ")"
             case Std(left, right, RelOp.Eq) => "[" + left + "] = [" + right + "]"
@@ -54,48 +48,52 @@ enum Rel {
 
 type RelSet = ArrayBuffer[Rel]
 
-class RelSets(val sets: ArrayBuffer[RelSet] = ArrayBuffer()) {
+object RelSets {
+    def SingleRel(rs: Rel) = ArrayBuffer(ArrayBuffer(rs))
+    def Empty: RelSets = ArrayBuffer(ArrayBuffer()) 
+}
+
+class RelSets extends ArrayBuffer[RelSet] {
     def and(rss2: RelSets): RelSets = {
-        val new_sets: ArrayBuffer[RelSet] = ArrayBuffer()
-        for (set <- sets) {
-            for (set2 <- rss2.sets) {
+        val new_sets = RelSets()
+        for (set <- this) {
+            for (set2 <- rss2) {
                 new_sets.addOne(set ++ set2)
             }
         }
-        RelSets(new_sets)
+        new_sets
     }
 
-    def or(rss2: RelSets): RelSets = {
-        RelSets(sets ++ rss2.sets)
-    }
+    def or(rss2: RelSets): RelSets = this ++ rss2
 
     def append_to_all(new_set: RelSet): RelSets = {
-        sets.foreach(_.appendAll(new_set))
+        foreach(_.appendAll(new_set))
         this
     }
 
     def prepend_to_all(new_set: RelSet): RelSets = {
-        sets.foreach(_.prependAll(new_set))
+        foreach(_.prependAll(new_set))
         this
     }
 
     def sort(): RelSets = {
-        sets.sortInPlaceBy(set => {
-            if (set.contains(Rel.Rec)) Int.MaxValue else set.length 
+        sortInPlaceBy(set => {
+            set.contains(Rel.Rec) match {
+                case true => Int.MaxValue
+                case false => set.length 
+            }
         })
         this
     }
 
     def find_sat_set(vars: VarSet): Option[(RelSet, VarSet)] = {
         var res: Option[(RelSet, VarSet)] = None
-        sets.takeWhile(set => {
+        takeWhile(set => {
             res = Solver(vars.clone(), set).solve()
             res.isEmpty
         })
         res
     }
 
-    def print(): Unit = {
-        sets.foreach(println)
-    }
+    def print(): Unit = foreach(println)
 }
