@@ -39,7 +39,7 @@ class Solver(vars: VarSet, rels: RelSet) {
                     case _ => Status.NoChange
                 }
             }
-            case Rel.Rec(_) => Status.NoChange
+            case _ => Status.NoChange
         }
     }
 
@@ -66,14 +66,14 @@ class Solver(vars: VarSet, rels: RelSet) {
     
     // rels has recursive relation, unroll it once and recur.
     def solve_recursive(rec_rel: Rel.Rec): Option[(RelSet, VarSet)] = {
-        var Rel.Rec(call) = rec_rel
+        var Rel.Rec(caller, call) = rec_rel
         var Ast.Call(callee, args) = call
-        var Ast.Func(_, new_vars) = callee
+        var Ast.Func(_, _, new_vars) = callee
 
         // unroll recursive relation.
         vars.addAll(new_vars)
         var new_stack_ptr = vars.length - new_vars.length
-        var old_stack_ptr = new_stack_ptr - new_vars.length
+        var old_stack_ptr = new_stack_ptr - caller.vars.length
         var new_rel_sets = Compiler(callee, vars, new_stack_ptr).compile()
 
         // relations to bind arguments/parameters.

@@ -14,11 +14,11 @@ class Compiler(
     def compile(ast: Ast): RelSets = {
         ast match {
             case Ast.Var(id) => RelSets.Empty
-            case Ast.Func(ast, vars) => compile(ast)
+            case Ast.Func(_, ast, vars) => compile(ast)
+            case call: Ast.Call => RelSets.SingleRel(Rel.Rec(fn, call))
             case Ast.BinOp(log_op: LogOp, left, right) => {
                 var leftRels = compile(left)
                 var rightRels = compile(right)
-                
                 log_op match {
                     case LogOp.And => leftRels.and(rightRels)
                     case LogOp.Or => leftRels.or(rightRels)
@@ -31,27 +31,6 @@ class Compiler(
                         RelSets.SingleRel(rel)
                     }
                     case _ => RelSets.Empty
-                }
-            }
-            case call: Ast.Call => {
-                var Ast.Call(callee, args) = call
-                var Ast.Func(caller_ast, caller_vars) = fn
-                var Ast.Func(callee_ast, callee_vars) = callee
-
-                callee == fn match {
-                    case true => RelSets.SingleRel(Rel.Rec(call))
-                    case false => {
-                        vars.addAll(callee_vars)
-                        var new_stack_ptr = stack_ptr + caller_vars.length
-                        var rel_sets = Compiler(callee, vars, new_stack_ptr).compile()
-                        
-                        var arg_binds: RelSet = args.zipWithIndex.map(p => {
-                            var (arg_id, i) = p
-                            Rel.Std(i + new_stack_ptr, arg_id + stack_ptr, RelOp.Eq)
-                        })
-
-                        rel_sets.append_to_all(arg_binds)
-                    }
                 }
             }
         }

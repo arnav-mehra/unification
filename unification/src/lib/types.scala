@@ -29,17 +29,20 @@ enum LogOp {
 enum Ast {
     case Var  (id: VarId)
     case BinOp(op: LogOp | RelOp, left: Ast, right: Ast)
-    case Func (var ast: Ast, var vars: VarSet)
+    case Func (name: String, var ast: Ast, var vars: VarSet)
     case Call (callee: Ast.Func, args: ArrayBuffer[VarId])
+    case VarStandIn(name: String)
+    case FuncStandIn(name: String, var ast: Ast, var vars: ArrayBuffer[Ast.VarStandIn])
+    case CallStandIn(callee: String, args: ArrayBuffer[Ast.VarStandIn])
 }
 
 enum Rel {
-    case Rec(call: Ast.Call)
+    case Rec(caller: Ast.Func, call: Ast.Call)
     case Std(left: VarId, right: VarId, rel: RelOp)
 
     override def toString(): String = {
         this match {
-            case Rec(call) => "Rec(" + call.args.foldLeft("")((acc, id) => acc + ", [" + id + "]").substring(2) + ")"
+            case Rec(_, call) => call.callee.name + "(" + call.args.foldLeft("")((acc, id) => acc + ", [" + id + "]").substring(2) + ")"
             case Std(left, right, RelOp.Eq) => "[" + left + "] = [" + right + "]"
             case Std(left, right, RelOp.Inc) => "[" + left + "] = [" + right + "] + 1"
         }
@@ -49,8 +52,16 @@ enum Rel {
 type RelSet = ArrayBuffer[Rel]
 
 object RelSets {
-    def SingleRel(rs: Rel) = ArrayBuffer(ArrayBuffer(rs))
-    def Empty: RelSets = ArrayBuffer(ArrayBuffer()) 
+    def SingleRel(rs: Rel): RelSets = {
+        var rss = RelSets()
+        rss.append(ArrayBuffer(rs))
+        rss
+    }
+    def Empty: RelSets = {
+        var rss = RelSets()
+        rss.append(ArrayBuffer())
+        rss
+    }
 }
 
 class RelSets extends ArrayBuffer[RelSet] {
@@ -64,7 +75,7 @@ class RelSets extends ArrayBuffer[RelSet] {
         new_sets
     }
 
-    def or(rss2: RelSets): RelSets = this ++ rss2
+    def or(rss2: RelSets): RelSets = this.addAll(rss2)
 
     def append_to_all(new_set: RelSet): RelSets = {
         foreach(_.appendAll(new_set))

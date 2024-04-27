@@ -1,0 +1,4 @@
+Add x y z => (
+    (x = 0 & y = z)
+    | (x > xc & yc > y & Add xc yc z)
+)
