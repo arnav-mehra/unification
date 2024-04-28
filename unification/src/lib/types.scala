@@ -31,9 +31,14 @@ enum Ast {
     case BinOp(op: LogOp | RelOp, left: Ast, right: Ast)
     case Func (name: String, var ast: Ast, var vars: VarSet)
     case Call (callee: Ast.Func, args: ArrayBuffer[VarId])
-    case VarStandIn(name: String)
-    case FuncStandIn(name: String, var ast: Ast, var vars: ArrayBuffer[Ast.VarStandIn])
-    case CallStandIn(callee: String, args: ArrayBuffer[Ast.VarStandIn])
+    case Query(callee: Ast.Func, args: VarSet)
+
+    override def toString(): String = {
+        this match {
+            case Call(callee, args) => callee.name + "(" + args.foldLeft("")((acc, id) => acc + ", [" + id + "]").substring(2) + ")"
+            case _ => ScalaRunTime._toString(this)
+        }
+    }
 }
 
 enum Rel {

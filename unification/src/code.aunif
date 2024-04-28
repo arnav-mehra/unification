@@ -1,4 +1,7 @@
 Add x y z => (
     (x = 0 & y = z)
     | (x > xc & yc > y & Add xc yc z)
-)
+);
+Add 1 4 z;
+Add x 2 17;
+Add 54 y 100;
