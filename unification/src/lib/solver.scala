@@ -43,10 +43,9 @@ class Solver(vars: VarSet, rels: RelSet) {
         }
     }
 
-    // determine if relations are consistent (ignoring recursive relations).
-    def solve_direct(): Boolean = {
+    def relax(): Boolean = {
         var sat: Option[Boolean] = None
-        
+
         while (sat.isEmpty) {
             var change = false
             for (rel <- rels) {
@@ -56,12 +55,28 @@ class Solver(vars: VarSet, rels: RelSet) {
                     case Status.NoChange => {}
                 }
             }
-            if (sat.isEmpty && !change) { // relations stabilized => consistency => sat
+            if (sat.isEmpty && !change) {
                 sat = Some(true)
             }
         }
-        
+
         sat == Some(true)
+    }
+
+    // determine if relations are consistent (ignoring recursive relations).
+    def solve_direct(): Boolean = {
+        var sat = relax()
+
+        (sat, vars.contains(None)) match {
+            case (true, true) => { // might be satisfiable if vars are stable.
+                var var_idx = vars.indexOf(None)
+                var vars_cpy = vars.clone()
+                vars_cpy(var_idx) = Some(Int.MaxValue / 2)
+                Solver(vars_cpy, rels).solve_direct()
+            }
+            case (true, false) => true // vars are stable, satisfiable guaranteed.
+            case (false, _) => false
+        }
     }
     
     // rels has recursive relation, unroll it once and recur.

@@ -25,7 +25,6 @@ class Indexer(fns: ArrayBuffer[ParsedAst.Func], qs: ArrayBuffer[ParsedAst.Call])
     def digest: (ArrayBuffer[Ast.Func], ArrayBuffer[Ast.Query]) = {
         fns.foreach(fn => {
             var var_map = VariableIndexer(fn).digest
-            println(var_map)
             var new_vars: VarSet = var_map.map(_ => None).to(ArrayBuffer)
             var_map.foreach((pvar, id) => pvar match {
                 case ParsedVar.Number(v) => new_vars(id) = Some(v)

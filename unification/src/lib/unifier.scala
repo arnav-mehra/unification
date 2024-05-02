@@ -19,11 +19,12 @@ class Unifier(
         sat_set match {
             case Some(p) => {
                 var (rels, vars) = p
-                println("Satisfiable.")
-                println(vars.take(args.length))
+                println(fn.name + "(" + vars.take(args.length) + ")")
+                println("Satisfiable.\n")
             }
             case None => {
-                println("Not satisfiable.")
+                println(fn.name + "(" + var_cpy + ")")
+                println("Not satisfiable.\n")
             }
         }
     }

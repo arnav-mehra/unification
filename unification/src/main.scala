@@ -13,15 +13,16 @@ object Main {
     }
 
     val fname: String = args(0) + ".aunif"
-    println("Running: " + fname)
+    println("Running: " + fname + "\n")
     
     val code: String = scala.io.Source.fromFile(fname).mkString
-    println(code)
+    println("Code:\n\t" + code.replaceAll("\n", "\n\t") + "\n")
 
     val (pfns, pqs) = ProgramParser.parse(code)
     var (_, q_ls) = Indexer(pfns, pqs).digest
 
     for (q <- q_ls) {
+      println("Query " + q_ls.indexOf(q) + ":")
       Unifier(q.callee, q.args).unify()
     }
   }
